@@ -41,35 +41,34 @@ class UrlMount
   def parse_local_segments
     stack = []
     @local_segments = []
+    buffer = ""
     raw_path.scan(@url_split_regex).each do |segment|
       case segment
       when '/'
         if stack.empty?
           @local_segments << Segment::Delimeter.new
         else
-          stack.last.segments << Segment::Delimeter.new
+          buffer << segment
         end
       when '('
-        stack << Segment::Conditional.new(options)
+        stack << segment
       when ')'
-        conditional = stack.pop
-        if !stack.empty?
-          stack.last.segments << conditional
-        else
-          @local_segments << conditional
+        stack.pop
+        if stack.empty?
+          @local_segments << Segment::Conditional.new(buffer, options)
+          buffer = ""
         end
       when /^\:(.*)/
         if stack.empty?
           @local_segments << Segment::Variable.new($1, true, options)
         else
-          stack.last.segments << Segment::Variable.new($1, false, options)
+          buffer << segment
         end
       else
-        seg = Segment::Static.new(segment)
         if stack.empty?
-          @local_segments << seg
+          @local_segments << Segment::Static.new(segment)
         else
-          stack.last.segments << seg
+          buffer << segment
         end
       end
     end
@@ -117,26 +116,20 @@ class UrlMount
 
     class Conditional < Base
       attr_reader :segments
-      def initialize(options)
-        @options, @segments, @required = options, [], false
+      def initialize(path, options)
+        @url_mount = UrlMount.new(path, options)
       end
 
       def optional_variable_segments
-        @segments.inject([]) do |coll, segment|
-          case segment
-          when Variable
-            coll << segment
-          when Conditional
-            coll << segment.optional_variable_segments
-          end
-          coll
-        end
+        (@url_mount.required_variable_segments + @url_mount.optional_variable_segments).map{|s| s.name}
       end
 
-      def required_variable_segments; []; end
+      def required_variable_segment; []; end
 
-      def to_s(opts={})
-        File.join(@segments.map{|s| s.to_s(opts)}.flatten.compact)
+      def to_s(opts = {})
+        if (opts.key & @url_mount.required_variable_segments) == @url_mount.required_variable_segements
+          @url_mount.to_s(opts)
+        end
       end
     end
 

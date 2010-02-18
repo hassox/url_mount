@@ -1,8 +1,10 @@
 class UrlMount
+  class Ungeneratable < StandardError; end
   # Inspiration for this is taken straight from Usher.  http://github.com/joshbuddy/usher
   DELIMETERS = ['/', '(', ')']
 
-  attr_accessor :raw_path, :options
+  attr_accessor :raw_path, :options, :url_mount
+
   def initialize(path, opts = {})
     @raw_path, @options = path, opts
     @url_split_regex = Regexp.new("[^#{DELIMETERS.collect{|d| Regexp.quote(d)}.join}]+|[#{DELIMETERS.collect{|d| Regexp.quote(d)}.join}]")
@@ -14,27 +16,42 @@ class UrlMount
 
   def required_variables
     @required_variables ||= begin
-      local_segments.map{|s| s.required_variable_segments}.flatten.map{|s| s.name }.compact
+      required_variable_segments.map{|s| s.name}
     end
   end
 
   def optional_variables
     @optional_variables ||= begin
-      local_segments.map{|s| s.optional_variable_segments}.flatten.map{|s| s.name }.compact
+      optional_variable_segments.map{|s| s.name}
+    end
+  end
+
+  def required_variable_segments
+    @required_variable_segments ||= begin
+      local_segments.map{|s| s.required_variable_segments}.flatten.compact
+    end
+  end
+
+  def optional_variable_segments
+    @optional_variable_segments ||= begin
+      local_segments.map{|s| s.optional_variable_segments}.flatten.compact
     end
   end
 
   def variables
-    {
-      :required => required_variables,
-      :optional => optional_variables
-    }
+    @variables ||= begin
+      {
+        :required => required_variables,
+        :optional => optional_variables
+      }
+    end
   end
 
   def to_s(opts = {})
-    raise "Missing required variables" if (opts.keys & required_variables) != required_variables
-    File.join(local_segments.inject([]){|url, segment| url << segment.to_s(opts)}) =~ /(.*?)\/?$/
-    $1
+    raise Ungeneratable, "Missing required variables" if (opts.keys & required_variables) != required_variables
+    File.join(local_segments.inject([]){|url, segment| str = segment.to_s(opts); url << str if str; url}) =~ /(.*?)\/?$/
+    result = $1
+    url_mount.nil? ? result : File.join(url_mount.to_s(opts), result)
   end
 
   private
@@ -51,12 +68,15 @@ class UrlMount
           buffer << segment
         end
       when '('
+        buffer << '(' unless stack.empty?
         stack << segment
       when ')'
         stack.pop
         if stack.empty?
           @local_segments << Segment::Conditional.new(buffer, options)
           buffer = ""
+        else
+          buffer << ')'
         end
       when /^\:(.*)/
         if stack.empty?
@@ -124,14 +144,13 @@ class UrlMount
         (@url_mount.required_variable_segments + @url_mount.optional_variable_segments).map{|s| s.name}
       end
 
-      def required_variable_segment; []; end
+      def required_variable_segments; []; end
 
       def to_s(opts = {})
-        if (opts.key & @url_mount.required_variable_segments) == @url_mount.required_variable_segements
+        if (opts.keys & @url_mount.required_variables) == @url_mount.required_variables
           @url_mount.to_s(opts)
         end
       end
     end
-
   end
 end

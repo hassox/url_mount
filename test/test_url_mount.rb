@@ -36,7 +36,7 @@ class TestUrlMount < Test::Unit::TestCase
 
     should "raise an exception when a required variable is missing" do
       u = UrlMount.new("/foo/:bar/:baz")
-      assert_raises RuntimeError do
+      assert_raises UrlMount::Ungeneratable do
         u.to_s(:bar => "baz")
       end
     end
@@ -61,6 +61,34 @@ class TestUrlMount < Test::Unit::TestCase
     should "skip nested optional variables when the optional parent is not present" do
       u = UrlMount.new("/foo(/:bar(/:baz))")
       assert_equal "/foo", u.to_s(:baz => "sue")
+    end
+  end
+
+  context "complex compound urls" do
+    should "generate complex urls containing multiple nested conditionals and multiple required variables" do
+      u = UrlMount.new("/foo(/:bar(/:baz))/:gary")
+      assert_equal "/foo/gary",           u.to_s(:gary => "gary")
+      assert_equal "/foo/bar/gary",       u.to_s(:gary => "gary", :bar => "bar")
+      assert_equal "/foo/bar/baz/gary",   u.to_s(:gary => "gary", :bar => "bar", :baz => "baz")
+      assert_raises UrlMount::Ungeneratable do
+        u.to_s(:bar => "bar")
+      end
+    end
+  end
+
+  context "nested url mounts" do
+    should "allow a mount to accept a mount" do
+      u1 = UrlMount.new("/root/:bar")
+      u2 = UrlMount.new("/baz/barry")
+      u1.url_mount = u2
+    end
+
+    should "generate the mount" do
+      u1 = UrlMount.new("/root/bar")
+      u2 = UrlMount.new("/baz/barry")
+      u1.url_mount = u2
+      assert "/root/bar", u1.to_s
+      assert "/root/bar/baz/barry", u2.to_s
     end
   end
 end

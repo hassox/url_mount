@@ -25,7 +25,8 @@ Gem::Specification.new do |s|
      "VERSION",
      "lib/url_mount.rb",
      "test/helper.rb",
-     "test/test_url_mount.rb"
+     "test/test_url_mount.rb",
+     "url_mount.gemspec"
   ]
   s.homepage = %q{http://github.com/hassox/url_mount}
   s.rdoc_options = ["--charset=UTF-8"]

@@ -5,8 +5,8 @@ begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
     gem.name = "url_mount"
-    gem.summary = %Q{TODO: one-line summary of your gem}
-    gem.description = %Q{TODO: longer description of your gem}
+    gem.summary = %Q{Universal mounting points for rack applications}
+    gem.description = %Q{Glue to allow mounted rack applications to know where they're mounted}
     gem.email = "has.sox@gmail.com"
     gem.homepage = "http://github.com/hassox/url_mount"
     gem.authors = ["Daniel Neighman"]

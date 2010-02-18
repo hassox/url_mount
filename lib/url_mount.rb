@@ -4,6 +4,7 @@ class UrlMount
   DELIMETERS = ['/', '(', ')']
 
   attr_accessor :raw_path, :options, :url_mount
+  alias_method :defaults, :options
 
   def initialize(path, opts = {})
     @raw_path, @options = path, opts
@@ -48,7 +49,10 @@ class UrlMount
   end
 
   def to_s(opts = {})
-    raise Ungeneratable, "Missing required variables" if (opts.keys & required_variables) != required_variables
+    opts = options.merge(opts)
+    requirements_met =  (required_variables - (opts.keys & required_variables)).empty?
+
+    raise Ungeneratable, "Missing required variables" unless requirements_met
     File.join(local_segments.inject([]){|url, segment| str = segment.to_s(opts); url << str if str; url}) =~ /(.*?)\/?$/
     result = $1
     url_mount.nil? ? result : File.join(url_mount.to_s(opts), result)

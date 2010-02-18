@@ -5,7 +5,9 @@ class TestUrlMount < Test::Unit::TestCase
     u = UrlMount.new("/some/path", :some => "options")
     assert_equal u.raw_path, "/some/path"
     assert_equal u.options,  :some => "options"
+    assert_equal({:some => "options"}, u.defaults)
   end
+
 
   context "required variables" do
     should "calculate the required variables of the mount as an emtpy array when there are none" do
@@ -61,6 +63,36 @@ class TestUrlMount < Test::Unit::TestCase
     should "skip nested optional variables when the optional parent is not present" do
       u = UrlMount.new("/foo(/:bar(/:baz))")
       assert_equal "/foo", u.to_s(:baz => "sue")
+    end
+  end
+
+  context "default variables" do
+    should "generate a simple url with a variable with a default" do
+      u = UrlMount.new("/foo/:bar", :bar => "default")
+      assert_equal "/foo/default", u.to_s
+    end
+
+    should "generate urls with multiple varilables using defaults" do
+      u = UrlMount.new("/foo/:bar/:baz", :bar => "bar", :baz => "baz")
+      assert_equal "/foo/bar/baz", u.to_s
+    end
+
+    should "generate urls with optional variables" do
+      u = UrlMount.new("/foo(/:bar)", :bar => "bar")
+      assert_equal "/foo/bar", u.to_s
+    end
+
+    should "generate urls with mixed variables" do
+      u = UrlMount.new("/foo/:bar(/:baz(/:barry))", :barry => "bazz", :bar => "clue")
+      assert_equal "/foo/clue", u.to_s
+      assert_equal "/foo/clue/sue/bazz", u.to_s(:baz => "sue")
+    end
+
+    should "generate urls with overwritten defaults" do
+      u = UrlMount.new("/foo/:bar(/:baz)", :bar => "barr", :baz => "bazz")
+      assert_equal "/foo/sue/larry",  u.to_s(:bar => "sue", :baz => "larry")
+      assert_equal "/foo/barr/gary",  u.to_s(:baz => "gary")
+      assert_equal "/foo/harry/bazz", u.to_s(:bar => "harry")
     end
   end
 

@@ -1,4 +1,4 @@
-= UrlMount
+h1. UrlMount
 
 UrlMount is a universal mount point designed for use in rack applications.
 
@@ -6,7 +6,7 @@ It provides a simple way to pass a url mounting point to the mounted application
 
 This means that when you mount an application in the url space, it's a simple to_s to get the mount point of where the application is.
 
-== Example
+h2. Example
 
 Say you mount an application at "/foo/bar"
 
@@ -27,7 +27,7 @@ This then allows the +my_app+ applciation, to know where it's mounted.  Generati
 
 The benefit of this is that all routers or applciations can make use of this.  If used, it can act as a universal glue between rack applications where parent apps can let the child applications know where they're mounted.
 
-=== Show me the code
+h3. Show me the code
 
 urlmount is made to be used with many routers that are currently available.
 
@@ -79,7 +79,7 @@ if mounted_app.respond_to?(:url_mount=)
 end
 </code></pre>
 
-== Note on Patches/Pull Requests
+h2. Note on Patches/Pull Requests
 
 * Fork the project.
 * Make your feature addition or bug fix.
@@ -89,6 +89,6 @@ end
   (if you want to have your own version, that is fine but bump version in a commit by itself I can ignore when I pull)
 * Send me a pull request. Bonus points for topic branches.
 
-== Copyright
+h2. Copyright
 
 Copyright (c) 2010 Daniel Neighman. See LICENSE for details.

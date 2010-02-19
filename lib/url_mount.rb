@@ -9,10 +9,15 @@ class UrlMount
   def initialize(path, opts = {})
     @raw_path, @options = path, opts
     @url_split_regex = Regexp.new("[^#{DELIMETERS.collect{|d| Regexp.quote(d)}.join}]+|[#{DELIMETERS.collect{|d| Regexp.quote(d)}.join}]")
+    to_s
   end
 
   def local_segments
     @local_segments || parse_local_segments
+  end
+
+  def variables
+    required_variables + local_variables
   end
 
   def required_variables
@@ -49,16 +54,27 @@ class UrlMount
   end
 
   def to_s(opts = {})
-    opts = options.merge(opts)
-    requirements_met =  (required_variables - (opts.keys & required_variables)).empty?
+    requirements_met =  (local_required_variables - (opts.keys + options.keys)).empty?
 
-    raise Ungeneratable, "Missing required variables" unless requirements_met
-    File.join(local_segments.inject([]){|url, segment| str = segment.to_s(opts); url << str if str; url}) =~ /(.*?)\/?$/
-    result = $1
-    url_mount.nil? ? result : File.join(url_mount.to_s(opts), result)
+    if !required_to_generate? && !requirements_met
+      nil
+    else
+      raise Ungeneratable, "Missing required variables" if !requirements_met
+      File.join(local_segments.inject([]){|url, segment| str = segment.to_s(opts); url << str if str; url}) =~ /(.*?)\/?$/
+      result = $1
+      url_mount.nil? ? result : File.join(url_mount.to_s(opts), result)
+    end
   end
 
   private
+  def local_required_variables
+    local_segments.select{|s| s.instance_of?(Segment::Variable)}.map{|s| s.name}
+  end
+
+  def required_to_generate?
+    true
+  end
+
   def parse_local_segments
     stack = []
     @local_segments = []
@@ -84,7 +100,7 @@ class UrlMount
         end
       when /^\:(.*)/
         if stack.empty?
-          @local_segments << Segment::Variable.new($1, true, options)
+          @local_segments << Segment::Variable.new($1, options)
         else
           buffer << segment
         end
@@ -104,9 +120,6 @@ class UrlMount
     class Base
       attr_accessor :name
 
-      def required!; @required = true; end
-      def required?; !!@required; end
-
       def optional_variable_segments; []; end
       def required_variable_segments; []; end
     end
@@ -121,8 +134,8 @@ class UrlMount
     end
 
     class Variable < Base
-      def initialize(name, required, options)
-        @name, @required = name.to_sym, true
+      def initialize(name, options)
+        @name, @options = name.to_sym, (options || {})
       end
 
       def optional_variable_segments
@@ -134,26 +147,31 @@ class UrlMount
       end
 
       def to_s(opts = {})
-        opts[name]
+        opts[name] || @options[name]
       end
     end
 
     class Conditional < Base
-      attr_reader :segments
-      def initialize(path, options)
-        @url_mount = UrlMount.new(path, options)
+      class UnrequiredUrlMount < UrlMount
+        private
+        def required_to_generate?; false; end
+      end
+
+      def initialize(*args)
+        @url_mount = UnrequiredUrlMount.new(*args)
       end
 
       def optional_variable_segments
-        (@url_mount.required_variable_segments + @url_mount.optional_variable_segments).map{|s| s.name}
+        (@url_mount.required_variable_segments + @url_mount.optional_variable_segments)
       end
 
-      def required_variable_segments; []; end
+      def required_variables; []; end
+      def optional_variables
+        (@url_mount.required_variables + @url_mount.optional_variables)
+      end
 
       def to_s(opts = {})
-        if (opts.keys & @url_mount.required_variables) == @url_mount.required_variables
-          @url_mount.to_s(opts)
-        end
+        @url_mount.to_s(opts)
       end
     end
   end

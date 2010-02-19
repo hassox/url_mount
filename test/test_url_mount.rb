@@ -8,7 +8,6 @@ class TestUrlMount < Test::Unit::TestCase
     assert_equal({:some => "options"}, u.defaults)
   end
 
-
   context "required variables" do
     should "calculate the required variables of the mount as an emtpy array when there are none" do
       u = UrlMount.new("/foo")
@@ -21,7 +20,7 @@ class TestUrlMount < Test::Unit::TestCase
     end
 
     should "calculate the required variables when there are some" do
-      u = UrlMount.new("/foo/:bar/baz/:homer")
+      u = UrlMount.new("/foo/:bar/baz/:homer", :bar => "bar", :homer => "homer")
       assert_equal [:bar, :homer], u.required_variables
       assert_equal( {:required => [:bar, :homer], :optional => []}, u.variables )
     end
@@ -32,15 +31,21 @@ class TestUrlMount < Test::Unit::TestCase
     end
 
     should "generate a dynamic url with static and variable segments" do
-      u = UrlMount.new("/foo/:bar/baz/:barry")
-      assert_equal "/foo/bar/baz/sue", u.to_s(:bar => "bar", :barry => "sue")
+      u = UrlMount.new("/foo/:bar/baz/:barry", :bar => "bar", :barry => "sue")
+      assert_equal "/foo/bar/baz/sue", u.to_s
     end
 
     should "raise an exception when a required variable is missing" do
-      u = UrlMount.new("/foo/:bar/:baz")
       assert_raises UrlMount::Ungeneratable do
-        u.to_s(:bar => "baz")
+        UrlMount.new("/foo/:bar/:baz")
       end
+    end
+
+    should "consume the options so the router does not use them" do
+      opts = {:bar => "bar", :other => "other"}
+      u = UrlMount.new("/foo/:bar", :bar => "some_default_bar")
+      u.to_s(opts)
+      assert_equal( {:bar => "bar", :other => "other"}, opts )
     end
   end
 
@@ -98,19 +103,16 @@ class TestUrlMount < Test::Unit::TestCase
 
   context "complex compound urls" do
     should "generate complex urls containing multiple nested conditionals and multiple required variables" do
-      u = UrlMount.new("/foo(/:bar(/:baz))/:gary")
-      assert_equal "/foo/gary",           u.to_s(:gary => "gary")
-      assert_equal "/foo/bar/gary",       u.to_s(:gary => "gary", :bar => "bar")
-      assert_equal "/foo/bar/baz/gary",   u.to_s(:gary => "gary", :bar => "bar", :baz => "baz")
-      assert_raises UrlMount::Ungeneratable do
-        u.to_s(:bar => "bar")
-      end
+      u = UrlMount.new("/foo(/:bar(/:baz))/:gary", :gary => "gary")
+      assert_equal "/foo/gary",           u.to_s
+      assert_equal "/foo/bar/gary",       u.to_s(:bar => "bar")
+      assert_equal "/foo/bar/baz/gary",   u.to_s(:bar => "bar", :baz => "baz")
     end
   end
 
   context "nested url mounts" do
     should "allow a mount to accept a mount" do
-      u1 = UrlMount.new("/root/:bar")
+      u1 = UrlMount.new("/root/:bar", :bar => "bar")
       u2 = UrlMount.new("/baz/barry")
       u1.url_mount = u2
     end
@@ -118,9 +120,25 @@ class TestUrlMount < Test::Unit::TestCase
     should "generate the mount" do
       u1 = UrlMount.new("/root/bar")
       u2 = UrlMount.new("/baz/barry")
-      u1.url_mount = u2
-      assert "/root/bar", u1.to_s
-      assert "/root/bar/baz/barry", u2.to_s
+      u2.url_mount = u1
+      assert_equal "/root/bar", u1.to_s
+      assert_equal "/root/bar/baz/barry", u2.to_s
+    end
+
+    should "overwrite a parents options" do
+      u1 = UrlMount.new("/root/:bar", :bar => "bar")
+      u2 = UrlMount.new("/baz/barry")
+      u2.url_mount = u1
+      assert_equal "/root/different/baz/barry", u2.to_s(:bar => "different")
+    end
+
+    should "not consume params to nested routes" do
+      u1 = UrlMount.new("/root/:bar",   :bar => "bar")
+      u2 = UrlMount.new("/baz/:barry",  :barry => "barry")
+      u2.url_mount = u1
+      opts = {:bar => "sue", :barry => "wendy"}
+      assert_equal "/root/sue/baz/wendy", u2.to_s(opts)
+      assert_equal({:bar => "sue", :barry => "wendy"}, opts)
     end
   end
 end

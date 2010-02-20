@@ -138,10 +138,6 @@ class UrlMount
         @name, @options = name.to_sym, (options || {})
       end
 
-      def optional_variable_segments
-        []
-      end
-
       def required_variable_segments
         [self]
       end

@@ -106,9 +106,9 @@ class TestUrlMount < Test::Unit::TestCase
     end
 
     should "generate optional and fixed paths with procs" do
-      u = UrlMount.new("/foo/:bar(/:baz)", :bar => proc{"the_bar"}, :baz => proc{"the_baz"})
-      assert_equal "/foo/the_bar/the_baz", u.to_s
-      assert_equal "/foo/bar/other_baz", u.to_s(:bar => "bar", :baz => proc{"other_baz"})
+      u = UrlMount.new("/foo/:bar(/:baz)",  :bar => proc{"the_bar"}, :baz => proc{"the_baz"})
+      assert_equal "/foo/the_bar/the_baz",  u.to_s
+      assert_equal "/foo/bar/other_baz",    u.to_s(:bar => "bar", :baz => proc{"other_baz"})
     end
   end
 

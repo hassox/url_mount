@@ -147,7 +147,8 @@ class UrlMount
       end
 
       def to_s(opts = {})
-        opts[name] || @options[name]
+        item = opts[name] || @options[name]
+        item.respond_to?(:call) ? item.call : item
       end
     end
 

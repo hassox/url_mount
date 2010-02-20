@@ -25,6 +25,11 @@ class TestUrlMount < Test::Unit::TestCase
       assert_equal( {:required => [:bar, :homer], :optional => []}, u.variables )
     end
 
+    should "calculate required variables from procs" do
+      u = UrlMount.new("/foo/:bar/:baz", :bar => "a_bar", :baz => proc{"baz_in_proc"})
+      assert_equal "/foo/a_bar/baz_in_proc", u.to_s
+    end
+
     should "generate a static url mount" do
       u = UrlMount.new("/foo/bar")
       assert_equal "/foo/bar", u.to_s
@@ -98,6 +103,12 @@ class TestUrlMount < Test::Unit::TestCase
       assert_equal "/foo/sue/larry",  u.to_s(:bar => "sue", :baz => "larry")
       assert_equal "/foo/barr/gary",  u.to_s(:baz => "gary")
       assert_equal "/foo/harry/bazz", u.to_s(:bar => "harry")
+    end
+
+    should "generate optional and fixed paths with procs" do
+      u = UrlMount.new("/foo/:bar(/:baz)", :bar => proc{"the_bar"}, :baz => proc{"the_baz"})
+      assert_equal "/foo/the_bar/the_baz", u.to_s
+      assert_equal "/foo/bar/other_baz", u.to_s(:bar => "bar", :baz => proc{"other_baz"})
     end
   end
 

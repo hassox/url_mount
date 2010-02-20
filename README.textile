@@ -25,7 +25,7 @@ This means that if an application can handle a url_mount, you give it one.
 This then allows the +my_app+ applciation, to know where it's mounted.  Generating a url is now as simple as
 <pre><code>File.join(url_mount.to_s, "/local/url/path")</code></pre>
 
-The benefit of this is that all routers or applciations can make use of this.  If used, it can act as a universal glue between rack applications where parent apps can let the child applications know where they're mounted.
+The benefit of this is that all routers or applciations can make use of this.  If used, it can act as a universal glue between rack applications where parent apps can let the child applications know where they're mounted so the child applciations can have a chance of generating full routes, even when they're not in the request path.
 
 h3. Show me the code
 
@@ -37,13 +37,16 @@ mount = urlmount.new("/foo/bar")
 mount.to_s == "/foo/bar"
 
 # Mount Point including variables
-mount = UrlMount.new("/foo/:bar")
+mount = UrlMount.new("/foo/:bar", :bar => "bar")
 mount.to_s(:bar => "something") == "/foo/something"
 mount.to_s #=> Raises UrlMount::Ungeneratable because a required variable was not found
 mount.required_variables == [:bar]
 
+# UrlMount::Ungeneratable raised when a route cannot be generated without options
+no_mount = UrlMount.new("/foo/:bar") # fails because the mount point cannot be generated with no options
+
 # Mount Point including optional variables
-mount = UrlMount.new("/foo/:bar(/:baz)")
+mount = UrlMount.new("/foo/:bar(/:baz)", :bar => "bar")
 mount.to_s(:bar => "doh") == "/foo/doh"
 mount.to_s(:bar => "doh", :baz => "hah") == "/foo/doh/hah"
 mount.required_variables == [:bar]
@@ -54,6 +57,10 @@ mount = UrlMount.new("/foo/:bar(/:baz)", :bar => "default_bar")
 mount.to_s == "/foo/default_bar"
 mount.to_s(:baz => "baz_value") == "/foo/default_bar/baz_value"
 mount.to_s(:bar => "other_bar") == "/foo/other_bar"
+
+# Using procs for mount point defaults
+mount = UrlMount.new("/foo/:bar", :bar => proc{"some_bar"})
+mount.to_s == "/foo/some_bar"
 
 # Nested mounting point
 mount_parent = UrlMount.new("/foo/bar")
@@ -77,6 +84,22 @@ if mounted_app.respond_to?(:url_mount=)
 
   mounted_app.url_mount = mount
 end
+</code></pre>
+
+h2. Generating routes
+
+When you generate routes, you can see which variables will be used by the mount point, so that you can remove these options from the options hash.  otherwise, depending on the generating application, you may get query string options.
+
+<pre><code>
+  url = UrlMount.new(/"foo/:bar(/:baz)", :bar => "some_bar")
+
+  generation_options = {:baz => "baz", :bar => "bar"}
+  mount_point = url.to_s(generation_options)
+
+  # We can now at this point ask the mount point what variables it will use if present.
+  url.variables.each{|v| generation_options.delete(v)}
+
+  # use the generation_options now without the mount_point variables to interfere with a query string
 </code></pre>
 
 h2. Note on Patches/Pull Requests

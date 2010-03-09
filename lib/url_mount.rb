@@ -60,9 +60,10 @@ class UrlMount
       nil
     else
       raise Ungeneratable, "Missing required variables" if !requirements_met
-      File.join(local_segments.inject([]){|url, segment| str = segment.to_s(opts); url << str if str; url}) =~ /(.*?)\/?$/
-      result = $1
-      url_mount.nil? ? result : File.join(url_mount.to_s(opts), result)
+      path = local_segments.inject([]){|url, segment| str = segment.to_s(opts); url << str if str; url}.join
+      match = /(.*?)\/?$/.match(path)
+      result = match[1]
+      url_mount.nil? ? result : url_mount.to_s(opts) << result
     end
   end
 

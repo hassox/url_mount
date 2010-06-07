@@ -5,6 +5,7 @@ class UrlMount
 
   attr_accessor :raw_path, :options, :url_mount, :host, :scheme
   alias_method :defaults, :options
+  alias_method :defaults=, :options=
 
   def initialize(path, opts = {}, &blk)
     @raw_path, @options = path, opts
@@ -74,14 +75,14 @@ class UrlMount
       nil
     else
       raise Ungeneratable, "Missing required variables" if !requirements_met
-      File.join(local_segments.inject([]){|url, segment| str = segment.to_s(opts); url << str if str; url}) =~ /(.*?)\/?$/
       path = local_segments.inject([]){|url, segment| str = segment.to_s(opts); url << str if str; url}.join
       match = /(.*?)\/?$/.match(path)
       result = match[1]
       path = url_mount.nil? ? result : File.join(url_mount.to_s(opts), result)
-      if opts[:host] || host || opts[:scheme] || scheme
-        _host   = opts[:host]   || host
-        _scheme = opts[:scheme] || scheme || "http"
+      _host   = opts.delete(:host)    || host
+      _scheme = opts.delete(:scheme)  || scheme
+      if _host || _scheme
+        _scheme ||= "http"
         raise Ungeneratable, "Missing host when generating absolute url" if _scheme && !_host
         uri = URI.parse(path)
         uri.host    = _host
@@ -171,7 +172,7 @@ class UrlMount
       end
 
       def to_s(opts = {})
-        item = opts[name] || @options[name]
+        item = opts.delete(name) || @options[name]
         item.respond_to?(:call) ? item.call : item
       end
     end

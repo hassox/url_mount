@@ -50,7 +50,7 @@ class TestUrlMount < Test::Unit::TestCase
       opts = {:bar => "bar", :other => "other"}
       u = UrlMount.new("/foo/:bar", :bar => "some_default_bar")
       u.url(opts)
-      assert_equal( {:bar => "bar", :other => "other"}, opts )
+      assert_equal( {:other => "other"}, opts )
     end
 
     should "alias to_s to url" do
@@ -147,15 +147,6 @@ class TestUrlMount < Test::Unit::TestCase
       u2 = UrlMount.new("/baz/barry")
       u2.url_mount = u1
       assert_equal "/root/different/baz/barry", u2.url(:bar => "different")
-    end
-
-    should "not consume params to nested routes" do
-      u1 = UrlMount.new("/root/:bar",   :bar => "bar")
-      u2 = UrlMount.new("/baz/:barry",  :barry => "barry")
-      u2.url_mount = u1
-      opts = {:bar => "sue", :barry => "wendy"}
-      assert_equal "/root/sue/baz/wendy", u2.url(opts)
-      assert_equal({:bar => "sue", :barry => "wendy"}, opts)
     end
   end
 

@@ -3,13 +3,20 @@ class UrlMount
   # Inspiration for this is taken straight from Usher.  http://github.com/joshbuddy/usher
   DELIMETERS = ['/', '(', ')']
 
-  attr_accessor :raw_path, :options, :url_mount
+  attr_accessor :raw_path, :options, :url_mount, :host, :scheme
   alias_method :defaults, :options
 
-  def initialize(path, opts = {})
+  def initialize(path, opts = {}, &blk)
     @raw_path, @options = path, opts
     @url_split_regex = Regexp.new("[^#{DELIMETERS.collect{|d| Regexp.quote(d)}.join}]+|[#{DELIMETERS.collect{|d| Regexp.quote(d)}.join}]")
-    to_s
+    @host, @scheme = opts[:host], opts[:scheme]
+    @callbacks = []
+    @callbacks << blk if blk
+  end
+
+  def callback(&blk)
+    @callbacks << blk if blk
+    @callbacks
   end
 
   def local_segments
@@ -53,7 +60,14 @@ class UrlMount
     end
   end
 
-  def to_s(opts = {})
+  def url(env = {}, opts = {})
+    unless env.key?('rack.version')
+      opts = env
+      env  = nil
+    end
+
+    @callbacks.each{|blk| blk.call(env,opts)} if env
+
     requirements_met =  (local_required_variables - (opts.keys + options.keys)).empty?
 
     if !required_to_generate? && !requirements_met
@@ -62,9 +76,21 @@ class UrlMount
       raise Ungeneratable, "Missing required variables" if !requirements_met
       File.join(local_segments.inject([]){|url, segment| str = segment.to_s(opts); url << str if str; url}) =~ /(.*?)\/?$/
       result = $1
-      url_mount.nil? ? result : File.join(url_mount.to_s(opts), result)
+      path = url_mount.nil? ? result : File.join(url_mount.to_s(opts), result)
+      if opts[:host] || host || opts[:scheme] || scheme
+        _host   = opts[:host]   || host
+        _scheme = opts[:scheme] || scheme || "http"
+        raise Ungeneratable, "Missing host when generating absolute url" if _scheme && !_host
+        uri = URI.parse(path)
+        uri.host    = _host
+        uri.scheme  = _scheme || "http"
+        uri.to_s
+      else
+        path
+      end
     end
   end
+  alias_method :to_s, :url
 
   private
   def local_required_variables

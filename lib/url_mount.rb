@@ -75,7 +75,9 @@ class UrlMount
     else
       raise Ungeneratable, "Missing required variables" if !requirements_met
       File.join(local_segments.inject([]){|url, segment| str = segment.to_s(opts); url << str if str; url}) =~ /(.*?)\/?$/
-      result = $1
+      path = local_segments.inject([]){|url, segment| str = segment.to_s(opts); url << str if str; url}.join
+      match = /(.*?)\/?$/.match(path)
+      result = match[1]
       path = url_mount.nil? ? result : File.join(url_mount.to_s(opts), result)
       if opts[:host] || host || opts[:scheme] || scheme
         _host   = opts[:host]   || host

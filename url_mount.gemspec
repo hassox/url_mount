@@ -17,6 +17,9 @@ Gem::Specification.new do |s|
   s.rubygems_version = %q{1.3.5}
   s.summary = %q{Universal mounting points for rack applications}
 
-  s.add_bundler_dependencies
+  s.add_dependency  'rack'
+  s.add_development_dependency 'rake'
+  s.add_development_dependency 'shoulda'
+  
 end
 
